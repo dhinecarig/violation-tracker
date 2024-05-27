@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Violation Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+        }
+        .container {
+            width: 300px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: 0 10px;
+        }
+        label, input, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .suggestions {
+            border: 1px solid #ccc;
+            background-color: #fff;
+            max-height: 100px;
+            overflow-y: auto;
+            border-radius: 5px;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
+        .suggestion {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .suggestion:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Violation Tracker</h1>
+        <form id="searchForm">
+            <label for="searchName">Search Name or ID:</label>
+            <input type="text" id="searchName" name="searchName" required>
+            <div id="suggestionsSearch" class="suggestions"></div>
+            <button type="submit">Search</button>
+        </form>
+        <div id="searchResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Add New Student</h2>
+        <form id="addStudentForm">
+            <label for="studentId">Student ID:</label>
+            <input type="text" id="studentId" name="studentId" required>
+            <label for="studentName">Student Name:</label>
+            <input type="text" id="studentName" name="studentName" required>
+            <label for="studentCourse">Course:</label>
+            <input type="text" id="studentCourse" name="studentCourse" required>
+            <label for="studentYear">Year:</label>
+            <input type="text" id="studentYear" name="studentYear" required>
+            <label for="studentBlock">Block:</label>
+            <input type="text" id="studentBlock" name="studentBlock" required>
+            <button type="submit">Add Student</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>Add Violation</h2>
+        <form id="addViolationForm">
+            <label for="violationSearch">Search Name or ID:</label>
+            <input type="text" id="violationSearch" name="violationSearch" required>
+            <div id="suggestionsViolation" class="suggestions"></div>
+            <label for="violationText">Violation:</label>
+            <input type="text" id="violationText" name="violationText" required>
+            <button type="submit">Add Violation</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>Clear Violations</h2>
+        <form id="clearViolationsForm">
+            <label for="clearSearch">Search Name or ID:</label>
+            <input type="text" id="clearSearch" name="clearSearch" required>
+            <div id="suggestionsClear" class="suggestions"></div>
+            <label for="clearPassword">Password:</label>
+            <input type="password" id="clearPassword" name="clearPassword" required>
+            <button type="submit">Clear Violations</button>
+        </form>
+    </div>
+
+    <script>
+        const PASSWORD = 'MAHALKO14';
+
+        function getStudents() {
+            return JSON.parse(localStorage.getItem('students')) || [];
+        }
+
+        function saveStudents(students) {
+            localStorage.setItem('students', JSON.stringify(students));
+        }
+
+        function showSuggestions(inputElement, suggestionsDiv, queryCallback) {
+            inputElement.addEventListener('input', function() {
+                const query = inputElement.value.trim().toLowerCase();
+                suggestionsDiv.innerHTML = '';
+                if (query.length > 0) {
+                    const filteredStudents = queryCallback(query);
+                    filteredStudents.forEach(student => {
+                        const suggestionDiv = document.createElement('div');
+                        suggestionDiv.classList.add('suggestion');
+                        suggestionDiv.textContent = `${student.name} (${student.id})`;
+                        suggestionDiv.addEventListener('click', () => {
+                            inputElement.value = student.id;
+                            suggestionsDiv.innerHTML = '';
+                        });
+                        suggestionsDiv.appendChild(suggestionDiv);
+                    });
+                }
+            });
+        }
+
+        const searchNameInput = document.getElementById('searchName');
+        const suggestionsSearchDiv = document.getElementById('suggestionsSearch');
+
+        showSuggestions(searchNameInput, suggestionsSearchDiv, (query) => {
+            const students = getStudents();
+            return students.filter(student => student.name.toLowerCase().includes(query) || student.id.toLowerCase().includes(query));
+        });
+
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const searchName = searchNameInput.value.trim().toLowerCase();
+            const students = getStudents();
+            const student = students.find(s => s.name.toLowerCase() === searchName || s.id.toLowerCase() === searchName);
+            const searchResultDiv = document.getElementById('searchResult');
+            if (student) {
+                searchResultDiv.innerHTML = `ID: ${student.id}<br>Name: ${student.name}<br>Course: ${student.course}<br>Year: ${student.year}<br>Block: ${student.blockNumber}<br>Violations: ${student.violations.length > 0 ? student.violations.join(', ') : 'None'}`;
+            } else {
+                searchResultDiv.innerHTML = 'No student found with this name or ID.';
+            }
+            suggestionsSearchDiv.innerHTML = '';
+        });
+
+        document.getElementById('addStudentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const studentId = document.getElementById('studentId').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            const studentCourse = document.getElementById('studentCourse').value.trim();
+            const studentYear = document.getElementById('studentYear').value.trim();
+            const studentBlock = document.getElementById('studentBlock').value.trim();
+
+            if (studentId && studentName && studentCourse && studentYear && studentBlock) {
+                const students = getStudents();
+                const newStudent = {
+                    id: studentId,
+                    name: studentName,
+                    course: studentCourse,
+                    year: studentYear,
+                    blockNumber: studentBlock,
+                    violations: []
+                };
+                students.push(newStudent);
+                saveStudents(students);
+                alert('Student added successfully!');
+                document.getElementById('addStudentForm').reset();
+            } else {
+                alert('All fields are required.');
+            }
+        });
+
+        const violationSearchInput = document.getElementById('violationSearch');
+        const suggestionsViolationDiv = document.getElementById('suggestionsViolation');
+
+        showSuggestions(violationSearchInput, suggestionsViolationDiv, (query) => {
+            const students = getStudents();
+            return students.filter(student => student.name.toLowerCase().includes(query) || student.id.toLowerCase().includes(query));
+        });
+
+        document.getElementById('addViolationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const violationSearch = violationSearchInput.value.trim().toLowerCase();
+            const violationText = document.getElementById('violationText').value.trim();
+
+            if (violationSearch && violationText) {
+                const students = getStudents();
+                const student = students.find(s => s.name.toLowerCase() === violationSearch || s.id.toLowerCase() === violationSearch);
+                if (student) {
+                    student.violations.push(violationText);
+                    saveStudents(students);
+                    alert('Violation added successfully!');
+                    document.getElementById('addViolationForm').reset();
+                } else {
+                    alert('No student found with this name or ID.');
+                }
+            } else {
+                alert('All fields are required.');
+            }
+        });
+
+        const clearSearchInput = document.getElementById('clearSearch');
+        const suggestionsClearDiv = document.getElementById('suggestionsClear');
+
+        showSuggestions(clearSearchInput, suggestionsClearDiv, (query) => {
+            const students = getStudents();
+            return students.filter(student => student.name.toLowerCase().includes(query) || student.id.toLowerCase().includes(query));
+        });
+
+        document.getElementById('clearViolationsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const clearSearch = clearSearchInput.value.trim().toLowerCase();
+            const clearPassword = document.getElementById('clearPassword').value.trim();
+
+            if (clearSearch && clearPassword) {
+                if (clearPassword === PASSWORD) {
+                    const students = getStudents();
+                    const student = students.find(s => s.name.toLowerCase() === clearSearch || s.id.toLowerCase() === clearSearch);
+                    if (student) {
+                        student.violations = [];
+                        saveStudents(students);
+                        alert('Violations cleared successfully!');
+                        document.getElementById('clearViolationsForm').reset();
+                    } else {
+                        alert('No student found with this name or ID.');
+                    }
+                } else {
+                    alert('Incorrect password.');
+                }
+            } else {
+                alert('All fields are required.');
+            }
+        });
+    </script>
+</body>
+</html>
